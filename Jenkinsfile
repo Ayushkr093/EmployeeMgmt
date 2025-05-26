@@ -12,8 +12,7 @@ pipeline {
         stage('Clone Repo') {
             steps {
                 cleanWs()
-                git branch: "${GIT_BRANCH}", url: "${GIT_REPO_URL}"
-                sh 'mv EmployeeMgmt my-php-project'
+                sh "git clone --branch ${GIT_BRANCH} --depth 1 ${GIT_REPO_URL} my-php-project"
             }
         }
 
