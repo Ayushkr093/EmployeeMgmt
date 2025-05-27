@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   php:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: php_app
     ports:
       - "3003:80"
@@ -26,18 +28,17 @@ services:
       - mysql_data:/var/lib/mysql
       - ./script.sql:/docker-entrypoint-initdb.d/script.sql
       - ./employees.sql:/docker-entrypoint-initdb.d/employees.sql
-    networks:
-      - app_network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-u", "root", "-pTesting"]
-      interval: 5s
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -pTesting || exit 1"]
+      interval: 10s
       timeout: 5s
       retries: 10
+    networks:
+      - app_network
+
+volumes:
+  mysql_data:
 
 networks:
   app_network:
     driver: bridge
-
-volumes:
-  mysql_data:
-    driver: local
