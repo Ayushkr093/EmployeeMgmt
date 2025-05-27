@@ -29,7 +29,7 @@ services:
     networks:
       - app_network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-u", "root", "-p080402"]
+      test: ["CMD", "mysqladmin", "ping", "-u", "root", "-pTesting"]
       interval: 5s
       timeout: 5s
       retries: 10
