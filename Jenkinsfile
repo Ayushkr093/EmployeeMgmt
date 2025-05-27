@@ -3,60 +3,69 @@ pipeline {
 
     environment {
         DOCKER_REGISTRY = 'ayushkr08'
-        APP_IMAGE = 'php-mysql-app'
+        APP_IMAGE = 'my_php_app'
         GIT_BRANCH = 'main'
         GIT_REPO_URL = 'https://github.com/Ayushkr093/EmployeeMgmt.git'
     }
 
     stages {
-        stage('Clone Repo') {
+        stage('Checkout Code') {
             steps {
                 cleanWs()
-                sh "git clone --branch ${GIT_BRANCH} --depth 1 ${GIT_REPO_URL} my-php-project"
+                git branch: "${GIT_BRANCH}", url: "${GIT_REPO_URL}"
             }
         }
 
-        stage('Docker Build & Push') {
+        stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'DOCKER_CREDENTIALS',
                     usernameVariable: 'DOCKER_USERNAME',
                     passwordVariable: 'DOCKER_PASSWORD'
                 )]) {
-                    sh '''
-                    echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-                    docker build -t ${DOCKER_REGISTRY}/${APP_IMAGE}:${GIT_BRANCH} -t ${DOCKER_REGISTRY}/${APP_IMAGE}:latest my-php-project
-                    docker push ${DOCKER_REGISTRY}/${APP_IMAGE}:${GIT_BRANCH}
-                    docker push ${DOCKER_REGISTRY}/${APP_IMAGE}:latest
-                    '''
+                    sh 'echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin'
                 }
             }
         }
 
-        stage('Deploy') {
+        stage('Build Docker Image') {
             steps {
-                dir('my-php-project') {
-                    sh '''
-                    docker-compose pull || true
-                    docker-compose down --remove-orphans
+                sh '''
+                    docker build -t $DOCKER_REGISTRY/$APP_IMAGE:$GIT_BRANCH .
+                    docker tag $DOCKER_REGISTRY/$APP_IMAGE:$GIT_BRANCH $DOCKER_REGISTRY/$APP_IMAGE:latest
+                '''
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                sh '''
+                    docker push $DOCKER_REGISTRY/$APP_IMAGE:$GIT_BRANCH
+                    docker push $DOCKER_REGISTRY/$APP_IMAGE:latest
+                '''
+            }
+        }
+
+        stage('Run Locally') {
+            steps {
+                sh '''
+                    docker-compose down --remove-orphans || true
                     docker-compose up -d --build --force-recreate
-                    '''
-                }
+                '''
             }
         }
     }
 
     post {
         always {
-            echo '🧹 Cleaning up...'
-            sh 'docker system prune -f --volumes || true'
+            echo '🧹 Cleaning workspace'
             cleanWs()
         }
         success {
-            echo '✅ Deployment successful!'
+            echo '✅ Build and deployment successful!'
         }
         failure {
-            echo '❌ Deployment failed!'
+            echo '❌ Build or deployment failed!'
         }
     }
 }
