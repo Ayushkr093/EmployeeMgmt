@@ -6,6 +6,7 @@ pipeline {
         APP_IMAGE = 'my_php_app'
         GIT_BRANCH = 'main'
         GIT_REPO_URL = 'https://github.com/Ayushkr093/EmployeeMgmt.git'
+        COMPOSE_FILE = 'docker-compose.yml' // Explicit compose file
     }
 
     stages {
@@ -30,28 +31,42 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                    docker build -t $DOCKER_REGISTRY/$APP_IMAGE:$GIT_BRANCH .
-                    docker tag $DOCKER_REGISTRY/$APP_IMAGE:$GIT_BRANCH $DOCKER_REGISTRY/$APP_IMAGE:latest
-                '''
+                script {
+                    // Add build args if needed
+                    sh """
+                        docker build -t ${DOCKER_REGISTRY}/${APP_IMAGE}:${GIT_BRANCH} .
+                        docker tag ${DOCKER_REGISTRY}/${APP_IMAGE}:${GIT_BRANCH} ${DOCKER_REGISTRY}/${APP_IMAGE}:latest
+                    """
+                }
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                sh '''
-                    docker push $DOCKER_REGISTRY/$APP_IMAGE:$GIT_BRANCH
-                    docker push $DOCKER_REGISTRY/$APP_IMAGE:latest
-                '''
+                sh """
+                    docker push ${DOCKER_REGISTRY}/${APP_IMAGE}:${GIT_BRANCH}
+                    docker push ${DOCKER_REGISTRY}/${APP_IMAGE}:latest
+                """
             }
         }
 
         stage('Run Locally') {
             steps {
-                sh '''
-                    docker-compose down --remove-orphans || true
-                    docker-compose up -d --build --force-recreate
-                '''
+                sh """
+                    docker-compose -f ${COMPOSE_FILE} down --remove-orphans || true
+                    docker-compose -f ${COMPOSE_FILE} up -d --build --force-recreate
+                    sleep 10 # Wait for containers to initialize
+                    docker-compose -f ${COMPOSE_FILE} ps # Show container status
+                """
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    // Add health check
+                    sh 'curl -I http://localhost:3003 || true'
+                }
             }
         }
     }
