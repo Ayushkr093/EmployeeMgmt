@@ -18,7 +18,7 @@ services:
     image: mysql:5.7
     container_name: mysql_db
     environment:
-      MYSQL_ROOT_PASSWORD: 080402
+      MYSQL_ROOT_PASSWORD: Testing
       MYSQL_DATABASE: demo_db
     ports:
       - "3306:3306"
